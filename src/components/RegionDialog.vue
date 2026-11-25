@@ -2,7 +2,7 @@
 //! 区域属性对话框（模态）：布局样式对齐主界面右侧面板。
 //!
 //! 基础项——区域文字（含对齐/缩进/docx 导入工具行）/ 手写体·打印体 /
-//! 起始页 / 打印字体（仅打印体）/ 字号；
+//! 起始页 / 字体文件（手写·打印体均可覆盖，留空使用主字体）/ 字号；
 //! 折叠面板「排版与扰动覆盖」——字距/扰动/错字率/涂改方式/颜色逐区域自定义，
 //! 留空 = 跟随主设置；打印体下扰动类覆盖不生效（引擎强制规整）。
 //! 编辑作用于 store.dialogDraft 草稿，确定时统一写回。
@@ -26,6 +26,7 @@ import { api } from "../api";
 import FontPicker from "./FontPicker.vue";
 import RegionTextEditor from "./RegionTextEditor.vue";
 import {
+  applyFontToTable,
   cancelRegionDialog,
   cleanText,
   confirmRegionDialog,
@@ -102,7 +103,6 @@ watch(
 );
 
 const draft = computed(() => store.dialogDraft);
-const isPrinted = computed(() => draft.value?.printed ?? false);
 const isNew = computed(() => store.dialogTargetIndex < 0);
 
 const roleOptions = computed(() =>
@@ -208,7 +208,16 @@ const strikeoutOptions = [
   { label: "叉号", value: 3 },
 ];
 
-/** 确定前校验打印字体文件存在（对齐 Python 版字体检查，失败保持对话框打开） */
+/** 将当前草稿的字体与字号批量应用到同一张表格的全部单元格区域（不关闭对话框）。
+ *  仅表格单元格区域（tableIndex 非空）可见入口；字号取整对齐确定时的写回行为。 */
+function onApplyFontToTable(): void {
+  const d = draft.value;
+  if (!d || d.tableIndex == null) return;
+  applyFontToTable(d.tableIndex, d.fontPath.trim(), Math.round(d.fontSize ?? 0));
+  message.success(`已将字体应用到表格 ${d.tableIndex} 的全部单元格`);
+}
+
+/** 确定前校验区域字体文件存在（手写/打印体均校验；对齐 Python 版字体检查，失败保持对话框打开） */
 async function onConfirm(): Promise<void> {
   if (draft.value) {
     draft.value.paragraphs = localParas.value.map((p) => ({ ...p }));
@@ -217,7 +226,7 @@ async function onConfirm(): Promise<void> {
     draft.value.indentEm = localParas.value[0]?.indentEm ?? 0;
   }
   const fontPath = (draft.value?.fontPath ?? "").trim();
-  if (isPrinted.value && fontPath !== "" && !(await api.pathExists(fontPath))) {
+  if (fontPath !== "" && !(await api.pathExists(fontPath))) {
     message.warning(`文字区域字体文件不存在：${fontPath}`);
     return;
   }
@@ -311,14 +320,19 @@ async function onConfirm(): Promise<void> {
           <span class="hint-line" style="margin: 0; margin-left: 6px">仅在指定页渲染，超出框选范围的内容自然截断</span>
         </div>
 
-        <span class="field-label">打印字体</span>
+        <span class="field-label">字体文件</span>
         <div class="field-control">
           <FontPicker
             v-model:value="draft.fontPath"
-            :disabled="!isPrinted"
             placeholder="留空使用主字体"
             style="flex: 1"
           />
+          <NTooltip v-if="draft.tableIndex" trigger="hover" placement="top">
+            <template #trigger>
+              <NButton size="small" @click="onApplyFontToTable()">此字体应用到整张表格</NButton>
+            </template>
+            将该字体与字号批量应用到表格 {{ draft.tableIndex }} 的全部单元格区域（不影响文字内容与其他参数）
+          </NTooltip>
         </div>
       </div>
 

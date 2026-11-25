@@ -122,6 +122,9 @@ pub struct TextRegion {
     /// 所在页（1 基）；1 = 第一页。
     #[serde(default)]
     pub page: i32,
+    /// 所属表格序号（1 基；非表格区域为 None）。
+    #[serde(default)]
+    pub table_index: Option<u32>,
     /// 对齐方式：0 左 / 1 居中 / 2 右（应用于区域整体文本）。
     #[serde(default)]
     pub align: i32,
@@ -193,6 +196,7 @@ impl Default for TextRegion {
             printed: false,
             font_size: 0,
             page: 1,
+            table_index: None,
             align: 0,
             indent_em: 0.0,
             paragraphs: Vec::new(),
@@ -236,12 +240,15 @@ impl TextRegion {
             || self.margin_left.is_some_and(|v| v > 0.0)
             || self.margin_right.is_some_and(|v| v > 0.0)
     }
-    /// 区域列表里的一行摘要（对齐 Python 版 `TextRegion.label`）。
+    /// 区域列表里的一行摘要（对齐 Python 版 `TextRegion.label`；
+    /// 表格单元格区域前缀 表N· 标注归属，对齐前端 store.ts regionLabel）。
     pub fn label(&self, index: usize) -> String {
         let style = if self.printed { "打印" } else { "手写" };
         let page = if self.page > 1 { format!(" 第{}页", self.page) } else { String::new() };
+        let table = self.table_index.map_or_else(String::new, |n| format!("表{n}·"));
         format!(
-            "{}. {}{} {}字 ({},{} {}×{})",
+            "{}{}. {}{} {}字 ({},{} {}×{})",
+            table,
             index,
             style,
             page,
@@ -897,6 +904,31 @@ mod tests {
         assert_eq!(partial_role.name, "学生A");
         assert_eq!(partial_role.font_path, "");
         assert_eq!(partial_role.font_size, None);
+    }
+
+    #[test]
+    fn text_region_table_index_defaults_none_for_legacy_json() {
+        // 旧版本保存的 JSON 无 table_index 字段：反序列化为 None（serde 向后兼容）
+        let legacy = r#"{"x":1,"y":2,"w":10,"h":5,"text":"答案","page":1}"#;
+        let r: TextRegion = serde_json::from_str(legacy).unwrap();
+        assert_eq!(r.table_index, None);
+        assert_eq!(TextRegion::default().table_index, None);
+
+        // 新字段写入后序列化往返保持
+        let r2 = TextRegion { table_index: Some(3), ..r.clone() };
+        let json = serde_json::to_string(&r2).unwrap();
+        let back: TextRegion = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.table_index, Some(3));
+        assert_eq!(back, r2);
+    }
+
+    #[test]
+    fn text_region_label_table_prefix() {
+        // 表格单元格区域带 表N· 前缀（对齐 store.ts regionLabel），普通区域无前缀
+        let plain = TextRegion { text: "你好".into(), page: 2, ..TextRegion::default() };
+        assert_eq!(plain.label(1), "1. 手写 第2页 2字 (0,0 0×0)");
+        let cell = TextRegion { text: "答案".into(), table_index: Some(2), ..TextRegion::default() };
+        assert_eq!(cell.label(3), "表2·3. 手写 2字 (0,0 0×0)");
     }
 
     #[test]

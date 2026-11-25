@@ -14,7 +14,12 @@ import {
   NTabs,
   NTag,
 } from "naive-ui";
-import { closeHelpModal, store } from "../store";
+import { closeHelpModal, openOnboarding, store } from "../store";
+
+function restartOnboarding(): void {
+  closeHelpModal();
+  openOnboarding();
+}
 </script>
 
 <template>
@@ -27,21 +32,24 @@ import { closeHelpModal, store } from "../store";
     @update:show="(val: boolean) => !val && closeHelpModal()"
   >
     <div class="help-modal-content">
-      <NTabs type="line" animated>
+      <NTabs type="line" animated v-model:value="store.helpTab">
         <!-- Tab 1: 快速上手 -->
-        <NTabPane name="quickstart" tab="🚀 快速上手">
+        <NTabPane name="quickstart" tab="🚀 三分钟上手">
           <NScrollbar style="max-height: 520px" trigger="none">
             <div class="help-pane">
               <div class="guide-lead">
-                欢迎使用手写模拟器！只需简单三步，即可将排版文本转换为充满真实人手书写随机感的高质量图片或 PDF。
+                第一次用？先选一个开始方式：<strong>写文字</strong>、<strong>填试卷 / 表格</strong>，或者
+                <strong>先看示例</strong>。字体和纸张会自动准备好，不需要先配一堆参数。
               </div>
 
               <div class="step-card">
                 <div class="step-badge">步骤 1</div>
                 <div class="step-body">
-                  <div class="step-title">选择字体与纸张背景</div>
+                  <div class="step-title">选字迹与纸张（或直接选一套方案）</div>
                   <div class="step-text">
-                    在右侧参数面板中点击<strong>「手写字体」</strong>选择您喜欢的字迹（支持 <code>.ttf</code> / <code>.otf</code> / <code>.ttc</code>）；点击<strong>「背景信纸」</strong>选择纸张底图（支持纯白、作文格子纸、高校实验报告纸等多种内置素材）。
+                    右栏顶部的<strong>「当前方案」</strong>可以一键载入「字体 + 纸张 + 版式」组合；
+                    想单独换字迹，展开<strong>「② 字迹」</strong>选择字体（支持 <code>.ttf</code> / <code>.ttc</code> / <code>.otf</code>）。
+                    软件不内置商业字体，首次会自动选用系统楷体；想更像手写，推荐换成自己的手写体。
                   </div>
                 </div>
               </div>
@@ -49,9 +57,12 @@ import { closeHelpModal, store } from "../store";
               <div class="step-card">
                 <div class="step-badge">步骤 2</div>
                 <div class="step-body">
-                  <div class="step-title">输入或导入文本</div>
+                  <div class="step-title">放入内容：文字或文档底图</div>
                   <div class="step-text">
-                    在<strong>「主文本与段落排版」</strong>输入框中键入文字，支持回车自然换行、段首缩进与对齐调整。您也可以点击<strong>「导入 docx」</strong>一键提取 Word 文档内容。停止输入约 300 毫秒后，左侧预览区将自动完成全分辨率实时排版。
+                    · <strong>纯文字</strong>：点「① 内容 → 写文字 / 编辑正文」，粘贴或输入文字，回车分段，选中文字还能指定笔迹角色。<br />
+                    · <strong>Word 正文</strong>：点「导入 Word 正文 (.docx)」，自动提取段落、对齐与缩进。<br />
+                    · <strong>试卷 / 表格</strong>：在 Word 里把要手写的部分用<strong>高亮</strong>标出，另存为 PDF 后点「导入 PDF / Word 打印底图」，
+                    软件会自动擦除高亮并识别成手写填空区域。
                   </div>
                 </div>
               </div>
@@ -59,18 +70,21 @@ import { closeHelpModal, store } from "../store";
               <div class="step-card">
                 <div class="step-badge">步骤 3</div>
                 <div class="step-body">
-                  <div class="step-title">实时预览与导出</div>
+                  <div class="step-title">预览、微调、导出</div>
                   <div class="step-text">
-                    左侧预览区展示最终视觉效果（可翻页查看长文档）。满意后在面板底部点击<strong>「导出为图片」</strong>批量保存 PNG，或点击<strong>「导出为 PDF」</strong>生成<strong>300 DPI 印刷级无损位图层 PDF</strong>，可直接打印存档。
+                    参数改动约 300 毫秒后自动渲染，也可以点预览区下方的<strong>「↻ 刷新」</strong>立即重绘。
+                    满意后点右栏底部的<strong>「导出图片」</strong>批量保存 PNG，或<strong>「导出 PDF」</strong>生成 300 DPI 打印级 PDF。
+                    文字区域、笔迹角色都在右侧对应分组里，需要时再展开。
                   </div>
                 </div>
               </div>
 
-              <NAlert type="info" title="常用快捷键与操作" style="margin-top: 12px">
+              <NAlert type="info" title="第一次使用的小提示" style="margin-top: 12px">
                 <ul class="guide-list">
-                  <li><strong>Esc 键</strong>：若当前处于区域选框调整态，按 Esc 可立即取消选框并恢复纯净预览。</li>
-                  <li><strong>翻页与底色</strong>：预览区下方可点击「上一页」「下一页」切换页面，点击「预览底色」切换视口对比度。</li>
-                  <li><strong>自动防抖</strong>：任意参数调节均防抖 300ms 后后台异步渲染，不卡顿界面。</li>
+                  <li><strong>没有字体也能先用</strong>：首次启动会自动选系统楷体；想换字体在「② 字迹」里选。</li>
+                  <li><strong>想先看效果</strong>：预览区空状态点「先看 30 秒示例」，会直接生成一张成品。</li>
+                  <li><strong>不知道怎么走</strong>：右栏顶部有「上手三步」清单，完成字迹 / 内容 / 导出会自动打勾。</li>
+                  <li><strong>随时重看引导</strong>：底部状态栏「✨ 新手引导」，或本窗口右下角按钮。</li>
                 </ul>
               </NAlert>
             </div>
@@ -100,7 +114,7 @@ import { closeHelpModal, store } from "../store";
                 <div class="section-title">第二步：导出为 PDF 导入（强烈推荐 ⭐）</div>
                 <div class="guide-text">
                   在 Word 中点击「文件」→「另存为 PDF」或「导出为 PDF」。<br />
-                  然后在软件中点击<strong>「导入文档底图」</strong>并选择该 PDF 文件。<br />
+                  然后在软件的<strong>「① 内容」</strong>组点击<strong>「导入 PDF / Word 打印底图」</strong>并选择该 PDF 文件。<br />
                   <NTag size="small" type="warning" style="margin-top: 6px">💡 为什么推荐 PDF？</NTag>
                   Word 文档直接解析受本机字体环境和排版引擎差异影响，个别版式可能轻微偏移；而 PDF 具备固化的矢量排版和嵌入字形，本软件能 <strong>100% 精确像素级还原文档每一页底图</strong>。
                 </div>
@@ -123,8 +137,8 @@ import { closeHelpModal, store } from "../store";
                 <div class="guide-text">
                   针对不同用户的使用习惯，软件会在导入时弹出确认选项：
                   <ul class="guide-list">
-                    <li><strong>PDF 想要保留背景色（不擦除、不提取选框）</strong>：导入文档底图时选择<strong>「仅作为纯底图」</strong>，软件将完整保留文档原始色彩、图像与文字，原样作为背景信纸。</li>
-                    <li><strong>Word 模板有高亮但想通篇全手写</strong>：导入 docx 时选择<strong>「全文手写模式」</strong>，软件自动忽略所有高亮背景标记，无需手动改模板，整篇直接全手写排版。</li>
+                    <li><strong>PDF 想要保留背景色（不擦除、不提取选框）</strong>：导入 PDF / Word 打印底图时选择<strong>「仅作为纯底图」</strong>，软件将完整保留文档原始色彩、图像与文字，原样作为背景信纸。</li>
+                    <li><strong>Word 模板有高亮但想通篇全手写</strong>：导入 Word 正文文本 (.docx) 时选择<strong>「全文手写模式」</strong>，软件自动忽略所有高亮背景标记，无需手动改模板，整篇直接全手写排版。</li>
                   </ul>
                 </div>
               </div>
@@ -153,7 +167,7 @@ import { closeHelpModal, store } from "../store";
               <div class="feature-section">
                 <div class="section-title">2. 笔迹角色管理（多人书写与多字体混排）</div>
                 <div class="guide-text">
-                  在参数面板中展开<strong>「笔迹角色管理」</strong>：
+                  在右栏「② 字迹」里点<strong>「多人笔迹 / 打印混排」</strong>展开角色列表：
                   <ul class="guide-list">
                     <li>系统默认为角色 0（主手写体）与角色 1（默认打印体）；导入带高亮的文档后，会自动为各高亮颜色生成角色（如手写角色 1、角色 2）。</li>
                     <li>您可以为每个角色单独设置<strong>不同的手写字体文件</strong>、<strong>墨水颜色</strong>（如黑色中性笔、蓝色圆珠笔、红笔批改）以及<strong>专属扰动强度</strong>。</li>
@@ -166,6 +180,18 @@ import { closeHelpModal, store } from "../store";
                 <div class="section-title">3. 手动框选文字区域</div>
                 <div class="guide-text">
                   除自动导入识别外，在任何普通信纸背景上，只要点击翻页栏上的<strong>「框选文字」</strong>按钮（光标变为十字线），在预览图上按住鼠标左键拉出一个矩形框，松开即可弹出区域创建对话框，随意添加手写或打印区域。
+                </div>
+              </div>
+
+              <div class="feature-section">
+                <div class="section-title">4. 预览缩放与平移（看清小格子）</div>
+                <div class="guide-text">
+                  <ul class="guide-list">
+                    <li><strong>滚轮缩放</strong>：鼠标在预览图上滚动滚轮（触控板双指滚动 / Ctrl+滚轮同效），会以光标位置为中心放大或缩小，最大 400%。</li>
+                    <li><strong>拖拽平移</strong>：放大后按住<strong>鼠标中键</strong>拖动，或在图纸空白处（非选框、非「框选文字」模式）按住左键拖动，即可移动画面；适应窗口时没有可移动余量。</li>
+                    <li><strong>缩放条</strong>：预览右下角的「− / 适应 / 100% / +」可快速切换；百分比是绝对比例——适应窗口时通常在 25%~40%，100% 即预览图 1 像素 : 1 屏幕像素（常规底图就是原始像素）。</li>
+                    <li><strong>聚焦区域</strong>：在右侧「文字区域」列表点条目末尾的 <strong>🔍</strong>，预览会直接居中并放大到该区域，适合检查小格子里字有没有出格。</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -208,7 +234,7 @@ import { closeHelpModal, store } from "../store";
               <div class="feature-section">
                 <div class="section-title">2. 写错字涂改模拟（绝妙真实细节）</div>
                 <div class="guide-text">
-                  展开面板底部的<strong>「写错字模拟」</strong>：
+                  在<strong>「③ 版式 → 高级：笔画扰动 / 写错字 / 边距」</strong>里找到<strong>「写错字」</strong>卡片（高级默认收起，点开即可）：
                   <ul class="guide-list">
                     <li><strong>错字率</strong>：建议设置为 <strong>2% ~ 5%</strong>。数值过大显得潦草，轻微错字更具手写真实感。</li>
                     <li><strong>涂改样式</strong>：支持<strong>单线划掉</strong>、<strong>双线划掉</strong>、<strong>斜线涂划</strong>、<strong>叉号划除</strong>。涂抹笔迹采用贝塞尔曲线与随机粗细模拟真实笔画。</li>
@@ -240,14 +266,14 @@ import { closeHelpModal, store } from "../store";
               <div class="feature-section">
                 <div class="section-title">1. 预设系统：满意的参数一键复用</div>
                 <div class="guide-text">
-                  参数面板的<strong>「预设」</strong>下拉可切换内置参数组合；调出满意的排版与扰动参数后，点击<strong>「保存」</strong>导出为预设文件，日后点击<strong>「载入」</strong>即可一键恢复整套配置。<NTag size="small" type="info" style="margin-top: 6px">💡 笔迹角色配置随预设一并保存，与 Python 版格式互通</NTag>
+                  右栏顶部的<strong>「当前方案」</strong>下拉可切换内置方案；调出满意的排版与扰动参数后，点<strong>「存为预设」</strong>保存成文件，日后点<strong>「从文件载入」</strong>即可一键恢复整套配置。<NTag size="small" type="info" style="margin-top: 6px">💡 笔迹角色配置随预设一并保存，与 Python 版格式互通</NTag>
                 </div>
               </div>
 
               <div class="feature-section">
                 <div class="section-title">2. 纯背景预览：先摆版式，再填内容</div>
                 <div class="guide-text">
-                  无需输入任何文字：选好背景信纸（或导入文档底图）后，左侧预览区会直接显示底图。先浏览整体版式、规划每处手写区域的位置，再逐页框选与录入文字，思路更顺畅。
+                  无需输入任何文字：选好纸张（或导入 PDF / Word 打印底图）后，左侧预览区会直接显示底图。先浏览整体版式、规划每处手写区域的位置，再逐页框选与录入文字，思路更顺畅。
                 </div>
               </div>
 
@@ -255,7 +281,7 @@ import { closeHelpModal, store } from "../store";
                 <div class="section-title">3. 边距与边界提示</div>
                 <div class="guide-text">
                   <ul class="guide-list">
-                    <li><strong>边距</strong>：面板「边距」区可分别设置上 / 下 / 左 / 右留白，控制正文在纸张中的落笔范围。</li>
+                    <li><strong>边距</strong>：在「③ 版式 → 高级」里分别设置上 / 下 / 左 / 右留白，控制正文在纸张中的落笔范围。</li>
                     <li><strong>边界提示（仅预览）</strong>：勾选后预览图上会用彩色框直观标出实际渲染边界，导出成品不受影响——对齐横线纸张、排查文字溢出时特别好用。</li>
                   </ul>
                 </div>
@@ -266,7 +292,7 @@ import { closeHelpModal, store } from "../store";
                 <div class="guide-text">
                   <ul class="guide-list">
                     <li><strong>文字颜色</strong>：支持 <code>#RRGGBB</code> 自定义墨水色，碳黑、蓝黑、红笔随意换。</li>
-                    <li><strong>深色模式</strong>：顶部标题栏一键轮转 🖥️ 跟随系统 / ☀️ 浅色 / 🌙 深色主题（也可在「关于」中精准选择）。</li>
+                    <li><strong>深色模式</strong>：底部状态栏一键轮转 🖥️ 跟随系统 / ☀️ 浅色 / 🌙 深色主题（也可在「关于」中精准选择）。</li>
                     <li><strong>预览底色</strong>：预览区下方可切换浅灰绿 / 深灰两档视口底色，长时间盯屏更护眼。</li>
                   </ul>
                 </div>
@@ -285,7 +311,10 @@ import { closeHelpModal, store } from "../store";
     </div>
 
     <template #footer>
-      <div style="display: flex; justify-content: flex-end">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <NButton quaternary size="small" @click="restartOnboarding()">
+          ✨ 重新观看新手引导
+        </NButton>
         <NButton type="primary" size="medium" @click="closeHelpModal()">
           我知道了
         </NButton>
